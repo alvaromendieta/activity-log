@@ -17,19 +17,18 @@ jobs:
         with:
           node-version: 18
 
+      # ✅ Instala Bun y lo agrega al PATH correctamente
       - name: Install Bun
         run: |
           curl -fsSL https://bun.sh/install | bash
-        shell: bash
-        env:
-          BUN_INSTALL: ~/.bun
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun --version
 
-      - name: Add Bun to PATH
-        run: echo "$HOME/.bun/bin" >> $GITHUB_PATH
-
+      # ✅ Instala dependencias y compila con ncc
       - name: Install dependencies and build
         run: |
-          bun i
+          bun install
           npx ncc build src/index.js --license licenses.txt
 
       - name: Upload build artifact
