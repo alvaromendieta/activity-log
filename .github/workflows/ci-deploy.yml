@@ -1,4 +1,5 @@
 name: CI Dev Deployment
+
 on:
   push:
     branches: [ master ]
@@ -6,28 +7,44 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build
-        run: |
-          npm install
-          npm run build
-          zip -r build.zip .
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-      - name: Upload Artifact
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+        shell: bash
+        env:
+          BUN_INSTALL: ~/.bun
+
+      - name: Add Bun to PATH
+        run: echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies and build
+        run: |
+          bun i
+          npx ncc build src/index.js --license licenses.txt
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: build.zip
+          path: dist/
 
   deploy-dev:
     needs: build
     runs-on: ubuntu-latest
     environment: dev
+
     steps:
-      - name: Download Artifact
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: build-artifact
@@ -38,4 +55,5 @@ jobs:
           TAG: ${{ vars.BUILD_TAG }}
           NOTE: ${{ vars.RELEASE_NOTE }}
         run: |
-          gh release create "$TAG" build.zip --notes "$NOTE"
+          echo "Creating release for dev environment..."
+          gh release create "$TAG" ./dist/* --notes "$NOTE"
